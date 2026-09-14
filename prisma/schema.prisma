@@ -1,0 +1,116 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Filiallar ───────────────────────────────────────────────────────────────
+model Branch {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  phone     String?
+  isOpen    Boolean  @default(true)
+  workHours String   @default("24/7")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders    Order[]
+
+  @@map("branches")
+}
+
+// ─── Menyu Taomlar ───────────────────────────────────────────────────────────
+model MenuItem {
+  id          String   @id @default(cuid())
+  name        String
+  nameUz      String
+  price       Int
+  category    String   @default("main")
+  description String?
+  isAvailable Boolean  @default(true)
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  orderItems  OrderItem[]
+
+  @@map("menu_items")
+}
+
+// ─── Mijozlar ─────────────────────────────────────────────────────────────────
+model Customer {
+  id           String   @id @default(cuid())
+  firstName    String
+  lastName     String?
+  phone        String   @unique
+  cashback     Int      @default(0)
+  totalSpent   Int      @default(0)
+  orderCount   Int      @default(0)
+  notes        String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  orders       Order[]
+
+  @@map("customers")
+}
+
+// ─── Buyurtmalar ─────────────────────────────────────────────────────────────
+// SQLite does not support enums – stored as String
+// status values: NEW | PREPARING | ON_THE_WAY | COMPLETED | CANCELLED
+model Order {
+  id             String   @id @default(cuid())
+  orderNumber    Int      @unique
+  status         String   @default("NEW")
+  totalAmount    Int
+  cashbackEarned Int      @default(0)
+  notes          String?
+  address        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  branchId    String
+  branch      Branch    @relation(fields: [branchId], references: [id])
+
+  customerId  String?
+  customer    Customer? @relation(fields: [customerId], references: [id])
+
+  items       OrderItem[]
+
+  @@map("orders")
+}
+
+// ─── Buyurtma Tarkibi ─────────────────────────────────────────────────────────
+model OrderItem {
+  id         String   @id @default(cuid())
+  quantity   Int      @default(1)
+  price      Int
+  createdAt  DateTime @default(now())
+
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  menuItemId String
+  menuItem   MenuItem @relation(fields: [menuItemId], references: [id])
+
+  @@map("order_items")
+}
+
+// ─── Foydalanuvchilar (Admin) ─────────────────────────────────────────────────
+// role values: ADMIN | MANAGER | CASHIER
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  role      String   @default("MANAGER")
+  createdAt DateTime @default(now())
+
+  @@map("users")
+}
